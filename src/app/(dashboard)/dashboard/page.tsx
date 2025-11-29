@@ -22,7 +22,7 @@ export default function Page() {
         <SectionCards projectId="proj_12345"/>
         <ChartAreaInteractive projectId="proj_12345"/>
       </div>
-      <div className="@container/main">
+      <div className="@container/main px-4 lg:px-6 space-y-6">
         <ActiveVisitorsTable
           projectId="proj_12345"
         />

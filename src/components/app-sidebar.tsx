@@ -42,12 +42,17 @@ const data = {
   },
   navGroups: [
     {
-      label: "Overview",
+      label: "Overviews",
       items: [
         {
           title: "Dashboard",
           url: "/dashboard-2",
           icon: LayoutPanelLeft,
+        },
+        {
+          title: "Live Dashboard",
+          url: "/dashboard",
+          icon: Users,
         },
       ],
     },
