@@ -1,92 +1,113 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Pie, PieChart, Label, Sector } from "recharts"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartStyle } from "@/components/ui/chart"
-import { Button } from "@/components/ui/button"
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
+import * as React from "react";
+import {
+  PieChart,
+  Pie,
+  Label,
+  Sector,
+} from "recharts";
 
-// -------------------------------------------------
-// Helper: Fetch devices API
-// -------------------------------------------------
-async function fetchDevices(project_id: string) {
-  const res = await fetch(
-    `http://localhost:3000/analytics/devices?project_id=${project_id}`
-  )
-  return res.json()
-}
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
 
-// -------------------------------------------------
-// Component
-// -------------------------------------------------
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartStyle,
+} from "@/components/ui/chart";
 
-export function DevicesBreakdown({ projectId }: { projectId: string }) {
-  const id = "devices-breakdown"
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+
+import { useDashboard2Data } from "../dashboard2-data-provider";
+
+export function DevicesBreakdown() {
+  const { devices, loading } = useDashboard2Data();
+  const id = "devices-breakdown";
 
   const [activeCategory, setActiveCategory] =
-    React.useState<"device" | "browser" | "os">("device")
-
-  const [data, setData] = React.useState({
-    devices: { desktop: 0, tablet: 0, mobile: 0 },
-    browsers: {} as Record<string, number>,
-    os: {} as Record<string, number>,
-  })
+    React.useState<"device" | "browser" | "os">("device");
 
   // -----------------------------
-  // Load from backend
+  // Handle loading + empty state
   // -----------------------------
-  React.useEffect(() => {
-    if (!projectId) return
-    fetchDevices(projectId).then((res) =>
-      setData({
-        devices: res.devices,
-        browsers: res.browsers,
-        os: res.os,
-      })
-    )
-  }, [projectId])
-
-  // -----------------------------
-  // Transform into chart-friendly format
-  // -----------------------------
-  const deviceData = [
-    { category: "desktop", label: "Desktop", amount: data.devices.desktop, fill: "var(--chart-1)" },
-    { category: "tablet", label: "Tablet", amount: data.devices.tablet, fill: "var(--chart-2)" },
-    { category: "mobile", label: "Mobile", amount: data.devices.mobile, fill: "var(--chart-3)" },
-  ]
-
-  const browserData = Object.entries(data.browsers).map(([name, count], i) => ({
-    category: name,
-    label: name,
-    amount: count,
-    fill: `var(--chart-${(i % 4) + 1})`,
-  }))
-
-  const osData = Object.entries(data.os).map(([name, count], i) => ({
-    category: name,
-    label: name,
-    amount: count,
-    fill: `var(--chart-${(i % 4) + 1})`,
-  }))
-
-  const datasets = {
-    device: deviceData,
-    browser: browserData,
-    os: osData,
+  if (loading || !devices) {
+    return (
+      <Card className="flex flex-col">
+        <CardHeader>
+          <CardTitle>Audience Breakdown</CardTitle>
+          <CardDescription>Devices, Browsers, and OS distribution</CardDescription>
+        </CardHeader>
+        <CardContent className="text-center text-sm text-muted-foreground py-20">
+          Loading device data…
+        </CardContent>
+      </Card>
+    );
   }
 
-  const activeData = datasets[activeCategory]
-  const activeIndex = 0 // simple highlight, can expand later
+  // -----------------------------
+  // Transform data from provider
+  // -----------------------------
+  const deviceDataset = [
+    {
+      category: "desktop",
+      label: "Desktop",
+      amount: devices.devices.desktop,
+      fill: "var(--chart-1)",
+    },
+    {
+      category: "tablet",
+      label: "Tablet",
+      amount: devices.devices.tablet,
+      fill: "var(--chart-2)",
+    },
+    {
+      category: "mobile",
+      label: "Mobile",
+      amount: devices.devices.mobile,
+      fill: "var(--chart-3)",
+    },
+  ];
 
-  // Config for ChartStyle
-  const chartConfig: Record<string, any> = {}
-  activeData.forEach((item, i) => {
+  const browserDataset = Object.entries(devices.browsers).map(
+    ([browser, count], i) => ({
+      category: browser,
+      label: browser,
+      amount: count,
+      fill: `var(--chart-${(i % 4) + 1})`,
+    })
+  );
+
+  const osDataset = Object.entries(devices.os).map(([os, count], i) => ({
+    category: os,
+    label: os,
+    amount: count,
+    fill: `var(--chart-${(i % 4) + 1})`,
+  }));
+
+  const datasets = {
+    device: deviceDataset,
+    browser: browserDataset,
+    os: osDataset,
+  };
+
+  const activeData = datasets[activeCategory];
+  const activeIndex = 0;
+
+  const chartConfig: Record<string, any> = {};
+  activeData.forEach((item) => {
     chartConfig[item.category] = {
       label: item.label,
       color: item.fill,
-    }
-  })
+    };
+  });
 
   // -----------------------------
   // Render
@@ -98,7 +119,9 @@ export function DevicesBreakdown({ projectId }: { projectId: string }) {
       <CardHeader className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between pb-2">
         <div>
           <CardTitle>Audience Breakdown</CardTitle>
-          <CardDescription>Devices, Browsers, and OS distribution</CardDescription>
+          <CardDescription>
+            Devices, Browsers, and OS distribution
+          </CardDescription>
         </div>
 
         <div className="flex items-center space-x-2">
@@ -122,7 +145,6 @@ export function DevicesBreakdown({ projectId }: { projectId: string }) {
 
       <CardContent className="flex flex-1 justify-center">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
-
           {/* CHART */}
           <div className="flex justify-center">
             <ChartContainer
@@ -153,8 +175,11 @@ export function DevicesBreakdown({ projectId }: { projectId: string }) {
                 >
                   <Label
                     content={({ viewBox }) => {
-                      if (!viewBox || !("cx" in viewBox)) return null
-                      const total = activeData.reduce((sum, i) => sum + i.amount, 0)
+                      if (!viewBox || !("cx" in viewBox)) return null;
+                      const total = activeData.reduce(
+                        (sum, i) => sum + i.amount,
+                        0
+                      );
                       return (
                         <text
                           x={viewBox.cx}
@@ -173,7 +198,7 @@ export function DevicesBreakdown({ projectId }: { projectId: string }) {
                             total
                           </tspan>
                         </text>
-                      )
+                      );
                     }}
                   />
                 </Pie>
@@ -184,7 +209,7 @@ export function DevicesBreakdown({ projectId }: { projectId: string }) {
           {/* LIST */}
           <div className="flex flex-col justify-center space-y-4">
             {activeData.map((item, index) => {
-              const isActive = index === activeIndex
+              const isActive = index === activeIndex;
 
               return (
                 <div
@@ -205,12 +230,11 @@ export function DevicesBreakdown({ projectId }: { projectId: string }) {
                     <div className="font-bold">{item.amount}</div>
                   </div>
                 </div>
-              )
+              );
             })}
           </div>
-
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

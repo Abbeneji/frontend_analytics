@@ -1,75 +1,64 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { useState, useMemo } from "react";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-
-/* -----------------------------------------------------
-   Visitors Over Time — supports 1d, 7d, 30d, 90d, 180d, 365d
------------------------------------------------------- */
+} from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { useDashboard2Data } from "../dashboard2-data-provider";
 
 export function VisitorsChart() {
-  const [timeRange, setTimeRange] = useState("90d")
-  const [data, setData] = useState<any[]>([])
-  const projectId = "proj_12345"
+  const { overview, loading } = useDashboard2Data();
 
-  function computeRange(range: string) {
-    const now = Date.now()
+  const [timeRange, setTimeRange] = useState("90d");
 
-    const lookup: any = {
+  // Convert the provider data into the chart format
+  const data = useMemo(() => {
+    if (!overview) return [];
+
+    const lookup: Record<string, number> = {
       "1d": 1,
       "7d": 7,
       "30d": 30,
       "90d": 90,
       "180d": 180,
       "365d": 365,
-    }
+    };
 
-    const days = lookup[range] ?? 90
-    return {
-      from: now - days * 24 * 60 * 60 * 1000,
-      to: now,
-    }
-  }
+    const rangeDays = lookup[timeRange] ?? 90;
+    const cutoff = Date.now() - rangeDays * 24 * 60 * 60 * 1000;
 
-  /* ---------------- Fetch Overview Data ---------------- */
-  useEffect(() => {
-    const { from, to } = computeRange(timeRange)
-
-    async function load() {
-      const url = `http://localhost:3000/analytics/overview?project_id=${projectId}&from=${from}&to=${to}`
-
-      const res = await fetch(url)
-      const json = await res.json()
-
-      const mapped = json.timeseries.map((p: any) => ({
+    return overview.timeseries
+      .filter((p) => new Date(p.date).getTime() >= cutoff)
+      .map((p) => ({
         date: new Date(p.date).toLocaleDateString("en-US", {
           month: "short",
-          day: timeRange === "1d" ? "numeric" : undefined,
+          day: "numeric",
         }),
         visitors: p.visitors,
         sessions: p.sessions,
-      }))
-
-      setData(mapped)
-    }
-
-    load()
-  }, [timeRange])
-
-  const chartConfig = {}
+      }));
+  }, [overview, timeRange]);
 
   /* ---------------- Skeleton Loading State ---------------- */
-  if (data.length === 0) {
+  if (loading || !overview) {
     return (
       <Card className="cursor-pointer">
         <CardHeader className="flex flex-row items-center justify-between">
@@ -83,7 +72,6 @@ export function VisitorsChart() {
                 <SelectValue placeholder="Select range" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="1d">Last 24 hours</SelectItem>
                 <SelectItem value="7d">Last 7 days</SelectItem>
                 <SelectItem value="30d">Last 30 days</SelectItem>
                 <SelectItem value="90d">Last 3 months</SelectItem>
@@ -100,7 +88,7 @@ export function VisitorsChart() {
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   /* ---------------- Render Chart ---------------- */
@@ -118,7 +106,6 @@ export function VisitorsChart() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="1d">Last 24 hours</SelectItem>
               <SelectItem value="7d">Last 7 days</SelectItem>
               <SelectItem value="30d">Last 30 days</SelectItem>
               <SelectItem value="90d">Last 3 months</SelectItem>
@@ -132,30 +119,23 @@ export function VisitorsChart() {
       </CardHeader>
 
       <CardContent className="p-6">
-        <ChartContainer config={chartConfig} className="h-[350px] w-full">
+        <ChartContainer config={{}} className="h-[350px] w-full">
           <AreaChart data={data}>
             <defs>
-              <linearGradient id="limeVisitors" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#9EE42A" stopOpacity={0.65} />
-                <stop offset="50%" stopColor="#81CD11" stopOpacity={0.4} />
-                <stop offset="100%" stopColor="#81CD11" stopOpacity={0} />
+              <linearGradient id="visitorsGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#C6FF4A" stopOpacity={0.7} />
+                <stop offset="50%" stopColor="#A8F234" stopOpacity={0.4} />
+                <stop offset="100%" stopColor="#A8F234" stopOpacity={0} />
               </linearGradient>
 
-              <linearGradient id="limeSessions" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#81CD11" stopOpacity={0.45} />
-                <stop offset="100%" stopColor="#81CD11" stopOpacity={0} />
+              <linearGradient id="sessionsGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#5FBF0F" stopOpacity={0.5} />
+                <stop offset="100%" stopColor="#5FBF0F" stopOpacity={0} />
               </linearGradient>
             </defs>
 
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" />
-
-            <XAxis
-              dataKey="date"
-              tickLine={false}
-              axisLine={false}
-              interval={timeRange === "1d" ? 0 : "preserveStartEnd"}
-            />
-
+            <XAxis dataKey="date" tickLine={false} axisLine={false} />
             <YAxis tickLine={false} axisLine={false} />
 
             <ChartTooltip content={<ChartTooltipContent />} />
@@ -163,23 +143,23 @@ export function VisitorsChart() {
             <Area
               type="monotone"
               dataKey="visitors"
-              stroke="#81CD11"
+              stroke="#A8F234"
               strokeWidth={2.5}
-              fill="url(#limeVisitors)"
+              fill="url(#visitorsGradient)"
               dot={false}
             />
 
             <Area
               type="monotone"
               dataKey="sessions"
-              stroke="#81CD11"
+              stroke="#5FBF0F"
               strokeWidth={2}
-              fill="url(#limeSessions)"
+              fill="url(#sessionsGradient)"
               dot={false}
             />
           </AreaChart>
         </ChartContainer>
       </CardContent>
     </Card>
-  )
+  );
 }

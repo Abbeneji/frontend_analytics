@@ -34,6 +34,8 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
+import Image from "next/image"
+
 const data = {
   user: {
     name: "Admin User",
@@ -107,7 +109,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
             <Link href="/dashboard-2">
-            <Atom className="ml-2 !h-10 !w-10 text-white" /> {/* This replaces the text div with the icon */}
+            <Image
+  src="/logo.png"        // name of the PNG in /public
+  alt="JetBeat Logo"
+  width={40}             // adjust size as needed
+  height={40}
+  className="ml-2 rounded-md"   // optional styling
+/>
             <h1 className="text-2xl font-bold tracking-tight">JetBeat.io</h1>
           </Link>
             </SidebarMenuButton>

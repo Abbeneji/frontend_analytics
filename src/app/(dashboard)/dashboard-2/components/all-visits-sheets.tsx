@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -21,6 +21,8 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 
+import { useDashboard2Data } from "../dashboard2-data-provider";
+
 interface Visit {
   uid: string;
   ts: number;
@@ -34,15 +36,15 @@ interface Visit {
 export function AllVisitsSheet({
   open,
   onClose,
-  projectId,
 }: {
   open: boolean;
   onClose: () => void;
-  projectId: string;
 }) {
-  const [visits, setVisits] = useState<Visit[]>([]);
-  const [page, setPage] = useState(1);
+  const { recentVisits, loading } = useDashboard2Data();
 
+  const visits: Visit[] = recentVisits ?? [];
+
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState("all");
   const [browser, setBrowser] = useState("all");
@@ -51,34 +53,14 @@ export function AllVisitsSheet({
 
   const perPage = 20;
 
-  // Load data
-  useEffect(() => {
-    if (!open) return;
-
-    async function load() {
-      try {
-        const res = await fetch(
-          `http://localhost:3000/analytics/recent?project_id=${projectId}&limit=2000`
-        );
-        const data = await res.json();
-        setVisits(data.visits || []);
-      } catch (err) {
-        console.log("Failed to load visits:", err);
-      }
-    }
-
-    load();
-  }, [open, projectId]);
-
   function timeAgo(ts: number) {
     const diff = Date.now() - ts;
-    const min = Math.floor(diff / 60000);
-    if (min < 1) return "just now";
-    if (min < 60) return `${min} min ago`;
-    const h = Math.floor(min / 60);
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return "just now";
+    if (m < 60) return `${m} min ago`;
+    const h = Math.floor(m / 60);
     if (h < 24) return `${h} hours ago`;
-    const d = Math.floor(h / 24);
-    return `${d} days ago`;
+    return `${Math.floor(h / 24)} days ago`;
   }
 
   function getCountryCode(locale?: string | null) {
@@ -87,13 +69,12 @@ export function AllVisitsSheet({
     return parts.length > 1 ? parts[1].toUpperCase() : "??";
   }
 
-  // Filtering logic
   const filtered = useMemo(() => {
     return visits.filter((v) => {
       const c = getCountryCode(v.locale);
 
       const matchSearch =
-        search.length === 0 ||
+        search === "" ||
         v.url.toLowerCase().includes(search.toLowerCase()) ||
         (v.browser ?? "").toLowerCase().includes(search.toLowerCase()) ||
         (v.os ?? "").toLowerCase().includes(search.toLowerCase()) ||
@@ -105,12 +86,12 @@ export function AllVisitsSheet({
 
       const now = Date.now();
       const diff = now - v.ts;
-      const oneDay = 24 * 60 * 60 * 1000;
+      const day = 24 * 60 * 60 * 1000;
 
       let matchRange = true;
-      if (range === "24h") matchRange = diff <= oneDay;
-      if (range === "7d") matchRange = diff <= oneDay * 7;
-      if (range === "30d") matchRange = diff <= oneDay * 30;
+      if (range === "24h") matchRange = diff <= day;
+      if (range === "7d") matchRange = diff <= day * 7;
+      if (range === "30d") matchRange = diff <= day * 30;
 
       return matchSearch && matchCountry && matchBrowser && matchOs && matchRange;
     });
@@ -132,7 +113,7 @@ export function AllVisitsSheet({
           </SheetDescription>
         </SheetHeader>
 
-        {/* Filters */}
+        {/* FILTER BAR */}
         <div className="p-4 border-b bg-muted/40">
           <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
             <Input
@@ -142,42 +123,61 @@ export function AllVisitsSheet({
               className="md:col-span-2"
             />
 
-            {/* Country */}
             <Select value={country} onValueChange={setCountry}>
-              <SelectTrigger><SelectValue placeholder="Country" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Country" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Countries</SelectItem>
-                <SelectItem value="NL">NL</SelectItem>
-                <SelectItem value="US">US</SelectItem>
-                <SelectItem value="DE">DE</SelectItem>
+                {[...new Set(visits.map((v) => getCountryCode(v.locale)))].map(
+                  (c) =>
+                    c && (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    )
+                )}
               </SelectContent>
             </Select>
 
-            {/* Browser */}
             <Select value={browser} onValueChange={setBrowser}>
-              <SelectTrigger><SelectValue placeholder="Browser" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Browser" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Browsers</SelectItem>
-                <SelectItem value="Chrome">Chrome</SelectItem>
-                <SelectItem value="Firefox">Firefox</SelectItem>
-                <SelectItem value="Safari">Safari</SelectItem>
+                {[...new Set(visits.map((v) => v.browser))].map(
+                  (b) =>
+                    b && (
+                      <SelectItem key={b} value={b}>
+                        {b}
+                      </SelectItem>
+                    )
+                )}
               </SelectContent>
             </Select>
 
-            {/* OS */}
             <Select value={os} onValueChange={setOs}>
-              <SelectTrigger><SelectValue placeholder="OS" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="OS" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All OS</SelectItem>
-                <SelectItem value="Windows">Windows</SelectItem>
-                <SelectItem value="Mac OS">Mac OS</SelectItem>
-                <SelectItem value="Linux">Linux</SelectItem>
+                {[...new Set(visits.map((v) => v.os))].map(
+                  (o) =>
+                    o && (
+                      <SelectItem key={o} value={o}>
+                        {o}
+                      </SelectItem>
+                    )
+                )}
               </SelectContent>
             </Select>
 
-            {/* Time Range */}
             <Select value={range} onValueChange={setRange}>
-              <SelectTrigger><SelectValue placeholder="Time range" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Time range" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Time</SelectItem>
                 <SelectItem value="24h">Last 24 Hours</SelectItem>
@@ -188,43 +188,56 @@ export function AllVisitsSheet({
           </div>
         </div>
 
-        {/* Scroll Area */}
+        {/* LIST */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {paginated.map((v, i) => {
-            const initials = (v.browser ?? "?").slice(0, 2).toUpperCase();
+          {loading && (
+            <p className="text-sm text-muted-foreground">Loading visits…</p>
+          )}
 
-            return (
-              <div
-                key={i}
-                className="flex p-4 rounded-lg border gap-4 items-center bg-card"
-              >
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback>{initials}</AvatarFallback>
-                </Avatar>
+          {!loading &&
+            paginated.map((v, i) => {
+              const initials = (v.browser ?? "?").slice(0, 2).toUpperCase();
 
-                <div className="flex flex-1 justify-between items-center">
-                  <div>
-                    <p className="text-sm font-medium">
-                      {v.browser || "Unknown"} · {v.os || "Unknown"} ·{" "}
-                      {getCountryCode(v.locale)}
-                    </p>
+              return (
+                <div
+                  key={i}
+                  className="flex p-4 rounded-lg border gap-4 items-center bg-card"
+                >
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback>{initials}</AvatarFallback>
+                  </Avatar>
 
-                    <p className="text-xs text-muted-foreground truncate max-w-xl">
-                      {v.url}
-                    </p>
-                  </div>
+                  <div className="flex flex-1 justify-between items-center">
+                    <div>
+                      <p className="text-sm font-medium">
+                        {v.browser || "Unknown"} · {v.os || "Unknown"} ·{" "}
+                        {getCountryCode(v.locale)}
+                      </p>
 
-                  <div className="text-right">
-                    <Badge variant="secondary">pageload</Badge>
-                    <p className="text-xs text-muted-foreground">{timeAgo(v.ts)}</p>
+                      <p className="text-xs text-muted-foreground truncate max-w-xl">
+                        {v.url}
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <Badge variant="secondary">pageload</Badge>
+                      <p className="text-xs text-muted-foreground">
+                        {timeAgo(v.ts)}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+
+          {!loading && paginated.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              No visits match these filters.
+            </p>
+          )}
         </div>
 
-        {/* Pagination */}
+        {/* PAGINATION */}
         <div className="border-t p-4 flex justify-between items-center">
           <div className="text-sm text-muted-foreground">
             Page {page} of {totalPages}

@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
+import * as React from "react";
+import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 
-import { useIsMobile } from "@/hooks/use-mobile"
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Card,
   CardAction,
@@ -11,102 +11,66 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   type ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart"
+} from "@/components/ui/chart";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   ToggleGroup,
   ToggleGroupItem,
-} from "@/components/ui/toggle-group"
+} from "@/components/ui/toggle-group";
+import { useDashboardData } from "../dashboard-data-provider";
 
-export const description = "An interactive area chart"
-
-type Props = {
-  projectId: string
-}
+export const description = "An interactive area chart";
 
 const chartConfig = {
   visitors: { label: "Visitors" },
   desktop: { label: "Desktop", color: "var(--primary)" },
   mobile: { label: "Mobile", color: "var(--primary)" },
-} satisfies ChartConfig
+} satisfies ChartConfig;
 
-type TimeRange = "90d" | "30d" | "7d"
+type TimeRange = "90d" | "30d" | "7d";
 
-export function ChartAreaInteractive({ projectId }: Props) {
-  const isMobile = useIsMobile()
-  const [timeRange, setTimeRange] = React.useState<TimeRange>("90d")
-  const [chartData, setChartData] = React.useState<any[]>([])
-  const [loading, setLoading] = React.useState(false)
+export function ChartAreaInteractive() {
+  const { overview, loading } = useDashboardData();
+  const isMobile = useIsMobile();
 
-  // Auto-switch to 7 days on mobile (only when it first becomes mobile)
+  const [timeRange, setTimeRange] = React.useState<TimeRange>("90d");
+
+  // Auto-switch to 7 days when on mobile
   React.useEffect(() => {
     if (isMobile) {
-      setTimeRange((prev) => (prev === "90d" ? "7d" : prev))
+      setTimeRange((prev) => (prev === "90d" ? "7d" : prev));
     }
-  }, [isMobile])
+  }, [isMobile]);
 
-  // Fetch data from backend whenever projectId or timeRange changes
-  React.useEffect(() => {
-    if (!projectId) return
+  const timeseries = overview?.timeseries || [];
 
-    const controller = new AbortController()
-    const fetchData = async () => {
-      try {
-        setLoading(true)
+  // Time-range filter
+  const now = Date.now();
+  const days =
+    timeRange === "90d" ? 90 : timeRange === "30d" ? 30 : 7;
+  const cutoff = now - days * 24 * 60 * 60 * 1000;
 
-        const now = Date.now()
-        let days = 90
-        if (timeRange === "30d") days = 30
-        if (timeRange === "7d") days = 7
+  const filtered = timeseries.filter((p: any) => {
+    return new Date(p.date).getTime() >= cutoff;
+  });
 
-        const from = now - days * 24 * 60 * 60 * 1000
-
-        const res = await fetch(
-          `http://localhost:3000/analytics/overview?project_id=${projectId}&from=${from}&to=${now}`,
-          { signal: controller.signal }
-        )
-
-        if (!res.ok) {
-          console.error("Overview fetch failed", res.status)
-          return
-        }
-
-        const json = await res.json()
-
-        const mapped = (json.timeseries || []).map((point: any) => ({
-          date: point.date,            // YYYY-MM-DD from backend
-          desktop: point.visitors,     // use visitors as "desktop" line
-          mobile: point.sessions,      // use sessions as "mobile" line
-        }))
-
-        setChartData(mapped)
-      } catch (err: any) {
-        if (err.name !== "AbortError") {
-          console.error("Chart load error:", err)
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false)
-        }
-      }
-    }
-
-    fetchData()
-
-    return () => controller.abort()
-  }, [projectId, timeRange])
+  const chartData = filtered.map((p: any) => ({
+    date: p.date,
+    desktop: p.visitors,
+    mobile: p.sessions,
+  }));
 
   return (
     <Card className="@container/card">
@@ -124,6 +88,7 @@ export function ChartAreaInteractive({ projectId }: Props) {
         </CardDescription>
 
         <CardAction>
+          {/* Desktop Toggle */}
           <ToggleGroup
             type="single"
             value={timeRange}
@@ -136,6 +101,7 @@ export function ChartAreaInteractive({ projectId }: Props) {
             <ToggleGroupItem value="7d">Last 7 days</ToggleGroupItem>
           </ToggleGroup>
 
+          {/* Mobile Select */}
           <Select
             value={timeRange}
             onValueChange={(val) => setTimeRange(val as TimeRange)}
@@ -143,10 +109,10 @@ export function ChartAreaInteractive({ projectId }: Props) {
             <SelectTrigger
               className="flex w-40 *:data-[slot=select-value]:block *:data-[slot=select-value]:truncate @[767px]/card:hidden"
               size="sm"
-              aria-label="Select range"
             >
               <SelectValue placeholder="Last 3 months" />
             </SelectTrigger>
+
             <SelectContent className="rounded-xl">
               <SelectItem value="90d">Last 3 months</SelectItem>
               <SelectItem value="30d">Last 30 days</SelectItem>
@@ -164,29 +130,13 @@ export function ChartAreaInteractive({ projectId }: Props) {
           <AreaChart data={chartData}>
             <defs>
               <linearGradient id="fillDesktop" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-desktop)"
-                  stopOpacity={1}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-desktop)"
-                  stopOpacity={0.1}
-                />
+                <stop offset="5%" stopColor="var(--color-desktop)" stopOpacity={1} />
+                <stop offset="95%" stopColor="var(--color-desktop)" stopOpacity={0.1} />
               </linearGradient>
 
               <linearGradient id="fillMobile" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-mobile)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-mobile)"
-                  stopOpacity={0.1}
-                />
+                <stop offset="5%" stopColor="var(--color-mobile)" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="var(--color-mobile)" stopOpacity={0.1} />
               </linearGradient>
             </defs>
 
@@ -196,8 +146,8 @@ export function ChartAreaInteractive({ projectId }: Props) {
               dataKey="date"
               tickLine={false}
               axisLine={false}
-              tickMargin={8}
               minTickGap={32}
+              tickMargin={8}
               tickFormatter={(value) =>
                 new Date(value).toLocaleDateString("en-US", {
                   month: "short",
@@ -228,7 +178,6 @@ export function ChartAreaInteractive({ projectId }: Props) {
               stroke="var(--color-mobile)"
               stackId="a"
             />
-
             <Area
               dataKey="desktop"
               type="natural"
@@ -241,10 +190,10 @@ export function ChartAreaInteractive({ projectId }: Props) {
 
         {loading && (
           <p className="mt-2 text-xs text-muted-foreground">
-            Loading {timeRange === "90d" ? "90 days" : timeRange === "30d" ? "30 days" : "7 days"} of data…
+            Loading data…
           </p>
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

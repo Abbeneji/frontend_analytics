@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   Sheet,
   SheetContent,
@@ -23,10 +23,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Line } from "react-chartjs-2";
 import "chart.js/auto";
 
-/*  
-    This is the same type structure you were using before  
-    (based on your original file)  :contentReference[oaicite:1]{index=1}
-*/
+import { useDashboard2Data } from "../dashboard2-data-provider";
+
 type PageStat = {
   url: string;
   pageviews: number;
@@ -43,11 +41,11 @@ type PageStat = {
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  projectId: string;
 };
 
-export function TopPagesSheet({ open, onOpenChange, projectId }: Props) {
-  const [pages, setPages] = useState<PageStat[]>([]);
+export function TopPagesSheet({ open, onOpenChange }: Props) {
+  const { pages, loading } = useDashboard2Data();
+
   const [search, setSearch] = useState("");
   const [device, setDevice] = useState("All");
   const [os, setOs] = useState("All");
@@ -57,31 +55,14 @@ export function TopPagesSheet({ open, onOpenChange, projectId }: Props) {
   const [page, setPage] = useState(1);
   const rowsPerPage = 5;
 
-  // LOAD FULL PAGE ANALYTICS
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch(
-          `http://localhost:3000/analytics/pages?project_id=${projectId}`
-        );
-        const data = await res.json();
-        if (Array.isArray(data.pages)) {
-          setPages(data.pages);
-        } else {
-          setPages([]);
-        }
-      } catch (err) {
-        console.error("TopPagesSheet load error:", err);
-      }
-    }
-
-    load();
-  }, [projectId]);
+  const allPages: PageStat[] = pages ?? [];
 
   // FILTER LOGIC
   const filtered = useMemo(() => {
-    return pages.filter((p) => {
-      if (search && !p.url.toLowerCase().includes(search.toLowerCase())) return false;
+    return allPages.filter((p) => {
+      if (search && !p.url.toLowerCase().includes(search.toLowerCase())) {
+        return false;
+      }
       if (device !== "All" && p.device !== device) return false;
       if (os !== "All" && p.os !== os) return false;
       if (country !== "All" && p.country !== country) return false;
@@ -98,9 +79,9 @@ export function TopPagesSheet({ open, onOpenChange, projectId }: Props) {
 
       return true;
     });
-  }, [pages, search, device, os, country, range]);
+  }, [allPages, search, device, os, country, range]);
 
-  const totalPages = Math.ceil(filtered.length / rowsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
   const paginated = filtered.slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
   // SPARKLINE helper
@@ -140,7 +121,9 @@ export function TopPagesSheet({ open, onOpenChange, projectId }: Props) {
   // REFERRER BOX
   function ReferrerBox({ referrers }: { referrers?: Record<string, number> }) {
     if (!referrers) return null;
-    const sorted = Object.entries(referrers).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    const sorted = Object.entries(referrers)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
 
     return (
       <div className="flex flex-col gap-1 text-xs text-muted-foreground">
@@ -167,11 +150,10 @@ export function TopPagesSheet({ open, onOpenChange, projectId }: Props) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-  side="right"
-  className="!w-screen !max-w-screen h-screen p-0 flex flex-col"
->
+        side="right"
+        className="!w-screen !max-w-screen h-screen p-0 flex flex-col"
+      >
         <div className="h-full flex flex-col">
-
           {/* HEADER */}
           <SheetHeader className="p-6 pb-4 border-b">
             <SheetTitle>All Pages</SheetTitle>
@@ -202,7 +184,7 @@ export function TopPagesSheet({ open, onOpenChange, projectId }: Props) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="All">All Countries</SelectItem>
-                  {[...new Set(pages.map((p) => p.country))].map(
+                  {[...new Set(allPages.map((p) => p.country))].map(
                     (c) =>
                       c && (
                         <SelectItem key={c} value={c}>
@@ -225,7 +207,7 @@ export function TopPagesSheet({ open, onOpenChange, projectId }: Props) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="All">All Devices</SelectItem>
-                  {[...new Set(pages.map((p) => p.device))].map(
+                  {[...new Set(allPages.map((p) => p.device))].map(
                     (d) =>
                       d && (
                         <SelectItem key={d} value={d}>
@@ -248,7 +230,7 @@ export function TopPagesSheet({ open, onOpenChange, projectId }: Props) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="All">All OS</SelectItem>
-                  {[...new Set(pages.map((p) => p.os))].map(
+                  {[...new Set(allPages.map((p) => p.os))].map(
                     (o) =>
                       o && (
                         <SelectItem key={o} value={o}>
@@ -282,54 +264,69 @@ export function TopPagesSheet({ open, onOpenChange, projectId }: Props) {
 
           {/* MAIN LIST */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {paginated.map((p, index) => (
-              <div
-                key={p.url + index}
-                className="p-5 border rounded-xl bg-card flex flex-col gap-4 shadow-sm"
-              >
-                {/* TOP ROW */}
-                <div className="flex justify-between items-start">
-                  <p className="font-medium text-sm break-all">{p.url}</p>
-                  <span className="text-xs text-primary px-2 py-1 bg-primary/10 rounded">
-                    {p.pageviews} views
-                  </span>
-                </div>
+            {loading && (
+              <p className="text-sm text-muted-foreground">
+                Loading page analytics…
+              </p>
+            )}
 
-                {/* TREND */}
-                <Sparkline trend={p.trend} />
-
-                {/* INSIGHTS ROW */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-                  <div>
-                    <p className="font-medium mb-1 text-muted-foreground">Referrers</p>
-                    <ReferrerBox referrers={p.referrers} />
+            {!loading &&
+              paginated.map((p, index) => (
+                <div
+                  key={p.url + index}
+                  className="p-5 border rounded-xl bg-card flex flex-col gap-4 shadow-sm"
+                >
+                  {/* TOP ROW */}
+                  <div className="flex justify-between items-start">
+                    <p className="font-medium text-sm break-all">{p.url}</p>
+                    <span className="text-xs text-primary px-2 py-1 bg-primary/10 rounded">
+                      {p.pageviews.toLocaleString()} views
+                    </span>
                   </div>
 
-                  <div>
-                    <p className="font-medium mb-1 text-muted-foreground">Country</p>
-                    <CountryBox country={p.country} />
-                  </div>
+                  {/* TREND */}
+                  <Sparkline trend={p.trend} />
 
-                  <div>
-                    <p className="font-medium mb-1 text-muted-foreground">Device / OS</p>
-                    <div className="flex gap-2">
-                      <span>{p.device || "??"}</span>
-                      <span>{p.os || "??"}</span>
+                  {/* INSIGHTS ROW */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                    <div>
+                      <p className="font-medium mb-1 text-muted-foreground">
+                        Referrers
+                      </p>
+                      <ReferrerBox referrers={p.referrers} />
+                    </div>
+
+                    <div>
+                      <p className="font-medium mb-1 text-muted-foreground">
+                        Country
+                      </p>
+                      <CountryBox country={p.country} />
+                    </div>
+
+                    <div>
+                      <p className="font-medium mb-1 text-muted-foreground">
+                        Device / OS
+                      </p>
+                      <div className="flex gap-2">
+                        <span>{p.device || "??"}</span>
+                        <span>{p.os || "??"}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
 
-            {paginated.length === 0 && (
-              <p className="text-sm text-muted-foreground">No pages match these filters.</p>
+            {!loading && paginated.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No pages match these filters.
+              </p>
             )}
           </div>
 
           {/* FOOTER PAGINATION */}
           <div className="p-4 border-t flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Page {page} of {totalPages || 1}
+              Page {page} of {totalPages}
             </p>
 
             <div className="flex gap-2">

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Eye } from "lucide-react";
+
 import {
   Card,
   CardHeader,
@@ -12,34 +13,18 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+
 import { AllVisitsSheet } from "./all-visits-sheets";
+import { useDashboard2Data } from "../dashboard2-data-provider";
 
-interface Visit {
-  uid: string;
-  ts: number;
-  url: string;
-  browser: string | null;
-  os: string | null;
-}
+export function RecentVisits() {
+  const { recentVisits, loading } = useDashboard2Data();
+  const [open, setOpen] = useState(false);
 
-export function RecentVisits({ projectId }: { projectId: string }) {
-  const [visits, setVisits] = useState<Visit[]>([]);
-  const [open, setOpen] = useState(false); // ⬅️ NEW STATE
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch(
-          `http://localhost:3000/analytics/recent?project_id=${projectId}&limit=5`
-        );
-        const data = await res.json();
-        setVisits(data.visits || []);
-      } catch (e) {
-        console.error("Failed loading recent visits:", e);
-      }
-    }
-    load();
-  }, [projectId]);
+  // Only show first 5 items (same as original)
+  const visits = useMemo(() => {
+    return (recentVisits ?? []).slice(0, 5);
+  }, [recentVisits]);
 
   function timeAgo(ts: number) {
     const diff = Date.now() - ts;
@@ -51,8 +36,7 @@ export function RecentVisits({ projectId }: { projectId: string }) {
     const h = Math.floor(min / 60);
     if (h < 24) return `${h} hours ago`;
 
-    const d = Math.floor(h / 24);
-    return `${d} days ago`;
+    return `${Math.floor(h / 24)} days ago`;
   }
 
   return (
@@ -66,52 +50,72 @@ export function RecentVisits({ projectId }: { projectId: string }) {
             </CardDescription>
           </div>
 
-          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setOpen(true)}
+            disabled={loading || visits.length === 0}
+          >
             <Eye className="h-4 w-4 mr-2" />
             View All
           </Button>
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {visits.map((v, i) => {
-            const initials = (v.browser ?? "?")
-              .slice(0, 2)
-              .toUpperCase();
+          {/* LOADING */}
+          {loading && (
+            <p className="text-sm text-muted-foreground">
+              Loading recent visits…
+            </p>
+          )}
 
-            return (
-              <div
-                key={i}
-                className="flex p-3 rounded-lg border gap-3 items-center"
-              >
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback>{initials}</AvatarFallback>
-                </Avatar>
+          {/* LIST */}
+          {!loading &&
+            visits.map((v, i) => {
+              const initials = (v.browser ?? "?")
+                .slice(0, 2)
+                .toUpperCase();
 
-                <div className="flex flex-1 justify-between">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">
-                      {v.browser || "Unknown"} · {v.os || "Unknown"}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {v.url}
-                    </p>
-                  </div>
+              return (
+                <div
+                  key={v.uid + "-" + i}
+                  className="flex p-3 rounded-lg border gap-3 items-center"
+                >
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback>{initials}</AvatarFallback>
+                  </Avatar>
 
-                  <div className="text-right">
-                    <Badge variant="secondary">pageload</Badge>
-                    <p className="text-xs text-muted-foreground">
-                      {timeAgo(v.ts)}
-                    </p>
+                  <div className="flex flex-1 justify-between">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">
+                        {v.browser || "Unknown"} · {v.os || "Unknown"}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {v.url}
+                      </p>
+                    </div>
+
+                    <div className="text-right ml-3 whitespace-nowrap">
+                      <Badge variant="secondary">pageload</Badge>
+                      <p className="text-xs text-muted-foreground">
+                        {timeAgo(v.ts)}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+
+          {!loading && visits.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              No recent visits yet
+            </p>
+          )}
         </CardContent>
       </Card>
 
       {/* MODAL */}
-      <AllVisitsSheet open={open} onClose={() => setOpen(false)} projectId={projectId} />
+      <AllVisitsSheet open={open} onClose={() => setOpen(false)} />
     </>
   );
 }

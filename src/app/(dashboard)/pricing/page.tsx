@@ -9,13 +9,16 @@ import faqsData from "./data/faqs.json"
 export default function PricingPage() {
   return (
     <div className="px-4 lg:px-6">
+      <section className='pb-12' id='pricing'>
+        {/* Features Section */}
+      <FeaturesGrid features={featuresData} />
+      </section>
       {/* Pricing Cards */}
       <section className='pb-12' id='pricing'>
         <PricingPlans mode="pricing" />
       </section>
 
-      {/* Features Section */}
-      <FeaturesGrid features={featuresData} />
+      
 
       {/* FAQ Section */}
       <FAQSection faqs={faqsData} />
