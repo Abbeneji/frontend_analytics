@@ -53,7 +53,6 @@ export function MetricsOverview() {
       trend: "up",
       icon: Users,
       footer: "Unique visitors",
-      subfooter: "Based on UID counts",
     },
     {
       title: "Total Sessions",
@@ -62,7 +61,6 @@ export function MetricsOverview() {
       trend: "up",
       icon: BarChart3,
       footer: "Engagement sessions",
-      subfooter: "Based on session IDs",
     },
     {
       title: "Pageviews",
@@ -71,7 +69,6 @@ export function MetricsOverview() {
       trend: "up",
       icon: MousePointerClick,
       footer: "Total pageload events",
-      subfooter: "Across all visits",
     },
     {
       title: "Bounce Rate",
@@ -80,7 +77,6 @@ export function MetricsOverview() {
       trend: metrics.bounceRate < 50 ? "up" : "down",
       icon: Timer,
       footer: "Single-page sessions",
-      subfooter: "Lower is better",
     }
   ]
 
@@ -108,9 +104,6 @@ export function MetricsOverview() {
             <CardFooter className="flex-col items-start gap-1.5 text-sm">
               <div className="line-clamp-1 flex gap-2 font-medium">
                 {metric.footer} <TrendIcon className="size-4" />
-              </div>
-              <div className="text-muted-foreground">
-                {metric.subfooter}
               </div>
             </CardFooter>
           </Card>

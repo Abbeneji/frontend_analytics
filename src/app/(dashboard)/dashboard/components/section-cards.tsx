@@ -71,7 +71,6 @@ export function SectionCards({ projectId }: SectionCardsProps) {
       trend: "up",
       icon: Users,
       footer: "People currently browsing",
-      subfooter: "Last 5 minutes activity",
     },
     {
       title: "Active Sessions",
@@ -80,7 +79,6 @@ export function SectionCards({ projectId }: SectionCardsProps) {
       trend: "up",
       icon: BarChart3,
       footer: "Open active sessions",
-      subfooter: "Based on session IDs",
     },
     {
       title: "Pageviews Today",
@@ -89,7 +87,6 @@ export function SectionCards({ projectId }: SectionCardsProps) {
       trend: "up",
       icon: MousePointerClick,
       footer: "Total pageloads",
-      subfooter: "Across all visitors",
     },
     {
       title: "Bounce Rate",
@@ -98,7 +95,6 @@ export function SectionCards({ projectId }: SectionCardsProps) {
       trend: metrics.bounceRate < 0.5 ? "up" : "down",
       icon: Timer,
       footer: "Single-page sessions",
-      subfooter: "Lower is better",
     }
   ]
 
@@ -126,9 +122,6 @@ export function SectionCards({ projectId }: SectionCardsProps) {
             <CardFooter className="flex-col items-start gap-1.5 text-sm">
               <div className="line-clamp-1 flex gap-2 font-medium">
                 {metric.footer} <TrendIcon className="size-4" />
-              </div>
-              <div className="text-muted-foreground">
-                {metric.subfooter}
               </div>
             </CardFooter>
           </Card>

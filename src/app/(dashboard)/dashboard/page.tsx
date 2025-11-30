@@ -13,8 +13,8 @@ export default function Page() {
       {/* Page Title and Description */}
       <div className="px-4 lg:px-6">
         <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome to your admin dashboard</p>
+          <h1 className="text-2xl font-bold tracking-tight">Live Dashboard</h1>
+          <p className="text-muted-foreground">Track your current visitor's behaviour and patterns</p>
         </div>
       </div>
 
@@ -23,9 +23,7 @@ export default function Page() {
         <ChartAreaInteractive projectId="proj_12345"/>
       </div>
       <div className="@container/main px-4 lg:px-6 space-y-6">
-        <ActiveVisitorsTable
-          projectId="proj_12345"
-        />
+        <ActiveVisitorsTable projectId="proj_12345"/>
       </div>
     </>
   )

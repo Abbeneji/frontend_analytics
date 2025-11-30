@@ -19,8 +19,20 @@ type Visitor = {
   browser: string;
   os: string;
   referrer: string;
+  locale: string;     // ✅ Added
+  country?: string;   // (Backend convenience, optional)
   last_seen: number;
 };
+
+// Convert "NL" → 🇳🇱
+function countryFlag(cc: string) {
+  if (!cc) return "";
+  const code = cc.toUpperCase();
+
+  return String.fromCodePoint(
+    ...Array.from(code).map(char => 127397 + char.charCodeAt(0))
+  );
+}
 
 export function ActiveVisitorsTable({ projectId }: { projectId: string }) {
   const [visitors, setVisitors] = React.useState<Visitor[]>([]);
@@ -73,7 +85,7 @@ export function ActiveVisitorsTable({ projectId }: { projectId: string }) {
 
   return (
     <section className="mt-6 space-y-4">
-      {/* Title row – same style as JetBeat section headers */}
+      {/* Title row */}
       <div className="px-4">
         <h2 className="text-base font-medium">Active Visitors (Live)</h2>
         <p className="text-sm text-muted-foreground">
@@ -81,7 +93,7 @@ export function ActiveVisitorsTable({ projectId }: { projectId: string }) {
         </p>
       </div>
 
-      {/* Table wrapper – matches JetBeat: overflow-hidden + rounded + border */}
+      {/* Table wrapper */}
       <div className="overflow-hidden rounded-lg border">
         <Table>
           <TableHeader className="bg-muted">
@@ -92,6 +104,7 @@ export function ActiveVisitorsTable({ projectId }: { projectId: string }) {
               <TableHead>Browser</TableHead>
               <TableHead>OS</TableHead>
               <TableHead>Referrer</TableHead>
+              <TableHead>Country</TableHead>   {/* ✅ NEW */}
               <TableHead className="text-right">Last Seen</TableHead>
             </TableRow>
           </TableHeader>
@@ -100,39 +113,54 @@ export function ActiveVisitorsTable({ projectId }: { projectId: string }) {
             {currentRows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="h-20 text-center text-sm text-muted-foreground"
                 >
                   No active visitors
                 </TableCell>
               </TableRow>
             ) : (
-              currentRows.map((v, i) => (
-                <TableRow key={`${v.uid}-${i}`}>
-                  <TableCell className="font-medium">
-                    {formatUid(v.uid)}
-                  </TableCell>
-                  <TableCell>{v.session.slice(0, 8)}</TableCell>
-                  <TableCell>
-                    {v.url
-                      .replace("http://", "")
-                      .replace("https://", "")
-                      .replace(/\/$/, "")}
-                  </TableCell>
-                  <TableCell>{v.browser}</TableCell>
-                  <TableCell>{v.os}</TableCell>
-                  <TableCell>{v.referrer || "Direct"}</TableCell>
-                  <TableCell className="text-right">
-                    {formatLastSeen(v.last_seen)}
-                  </TableCell>
-                </TableRow>
-              ))
+              currentRows.map((v, i) => {
+                // "nl-NL" → ["nl", "NL"] → "NL"
+                const country =
+                  v.country ||
+                  (v.locale?.includes("-")
+                    ? v.locale.split("-")[1]
+                    : "XX");
+
+                return (
+                  <TableRow key={`${v.uid}-${i}`}>
+                    <TableCell className="font-medium">
+                      {formatUid(v.uid)}
+                    </TableCell>
+                    <TableCell>{v.session.slice(0, 8)}</TableCell>
+                    <TableCell>
+                      {v.url
+                        .replace("http://", "")
+                        .replace("https://", "")
+                        .replace(/\/$/, "")}
+                    </TableCell>
+                    <TableCell>{v.browser}</TableCell>
+                    <TableCell>{v.os}</TableCell>
+                    <TableCell>{v.referrer || "Direct"}</TableCell>
+
+                    {/* COUNTRY COLUMN */}
+                    <TableCell className="whitespace-nowrap">
+                      {countryFlag(country)} {country}
+                    </TableCell>
+
+                    <TableCell className="text-right">
+                      {formatLastSeen(v.last_seen)}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
       </div>
 
-      {/* Pagination row – same flex layout + spacing as template */}
+      {/* Pagination */}
       <div className="flex items-center justify-between px-4 pb-2 text-sm">
         <div className="text-muted-foreground">
           {visitors.length === 0

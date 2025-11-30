@@ -12,6 +12,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AllVisitsSheet } from "./all-visits-sheets";
 
 interface Visit {
   uid: string;
@@ -23,6 +24,7 @@ interface Visit {
 
 export function RecentVisits({ projectId }: { projectId: string }) {
   const [visits, setVisits] = useState<Visit[]>([]);
+  const [open, setOpen] = useState(false); // ⬅️ NEW STATE
 
   useEffect(() => {
     async function load() {
@@ -54,56 +56,62 @@ export function RecentVisits({ projectId }: { projectId: string }) {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-4">
-        <div>
-          <CardTitle>Recent Visits</CardTitle>
-          <CardDescription>
-            Latest activity from your visitors
-          </CardDescription>
-        </div>
-        <Button variant="outline" size="sm">
-          <Eye className="h-4 w-4 mr-2" />
-          View All
-        </Button>
-      </CardHeader>
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-4">
+          <div>
+            <CardTitle>Recent Visits</CardTitle>
+            <CardDescription>
+              Latest activity from your visitors
+            </CardDescription>
+          </div>
 
-      <CardContent className="space-y-4">
-        {visits.map((v, i) => {
-          const initials = (v.browser ?? "?")
-            .slice(0, 2)
-            .toUpperCase();
+          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+            <Eye className="h-4 w-4 mr-2" />
+            View All
+          </Button>
+        </CardHeader>
 
-          return (
-            <div
-              key={i}
-              className="flex p-3 rounded-lg border gap-3 items-center"
-            >
-              <Avatar className="h-8 w-8">
-                <AvatarFallback>{initials}</AvatarFallback>
-              </Avatar>
+        <CardContent className="space-y-4">
+          {visits.map((v, i) => {
+            const initials = (v.browser ?? "?")
+              .slice(0, 2)
+              .toUpperCase();
 
-              <div className="flex flex-1 justify-between">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">
-                    {v.browser || "Unknown"} · {v.os || "Unknown"}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {v.url}
-                  </p>
-                </div>
+            return (
+              <div
+                key={i}
+                className="flex p-3 rounded-lg border gap-3 items-center"
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback>{initials}</AvatarFallback>
+                </Avatar>
 
-                <div className="text-right">
-                  <Badge variant="secondary">pageload</Badge>
-                  <p className="text-xs text-muted-foreground">
-                    {timeAgo(v.ts)}
-                  </p>
+                <div className="flex flex-1 justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">
+                      {v.browser || "Unknown"} · {v.os || "Unknown"}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {v.url}
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+                    <Badge variant="secondary">pageload</Badge>
+                    <p className="text-xs text-muted-foreground">
+                      {timeAgo(v.ts)}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </CardContent>
-    </Card>
+            );
+          })}
+        </CardContent>
+      </Card>
+
+      {/* MODAL */}
+      <AllVisitsSheet open={open} onClose={() => setOpen(false)} projectId={projectId} />
+    </>
   );
 }

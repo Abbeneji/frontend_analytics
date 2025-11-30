@@ -7,10 +7,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 export function QuickActions() {
   return (
     <div className="flex items-center space-x-2">
-      <Button className="cursor-pointer">
-        <Plus className="h-4 w-4 mr-2" />
-        New Sale
-      </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" className="cursor-pointer">
