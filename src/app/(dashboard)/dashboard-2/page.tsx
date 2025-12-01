@@ -71,7 +71,7 @@ export default function Dashboard2() {
             <CustomerInsights />
 
             {/* Optional revenue/products */}
-            {/* <TopProducts /> */}
+            <TopProducts />
           </div>
         </div>
       </Dashboard2DataProvider>

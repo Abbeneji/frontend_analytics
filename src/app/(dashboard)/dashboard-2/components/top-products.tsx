@@ -64,8 +64,8 @@ export function TopProducts() {
     <Card className="cursor-pointer">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <div>
-          <CardTitle>Top Products</CardTitle>
-          <CardDescription>Best performing products this month</CardDescription>
+          <CardTitle>Top referrers</CardTitle>
+          <CardDescription>See where your visitors are coming from</CardDescription>
         </div>
         <Button variant="outline" size="sm" className="cursor-pointer">
           <Eye className="h-4 w-4 mr-2" />
